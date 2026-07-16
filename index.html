@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestão Florestal — Dashboard Executivo | ADM Retiro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+:root{
+  --green:#2f8a44; --green-dark:#22672f; --green-light:#e7f4e9;
+  --navy:#0f2947; --sidebar1:#0d2b1c; --sidebar2:#123322;
+  --yellow:#f2b705; --yellow-light:#fdf0d3;
+  --red:#e6483f; --red-light:#fbe1e0;
+  --blue:#2f7de1; --blue-light:#e2ecfb;
+  --bg:#f3f5f8; --card:#fff; --ink:#16233a; --mid:#66768c; --light:#9aa8b8; --border:#e8ecf1;
+  --radius:14px; --shadow:0 1px 2px rgba(15,41,71,.05),0 2px 8px rgba(15,41,71,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);display:flex;min-height:100vh;font-size:14px;}
+svg{display:block;}
+
+/* SIDEBAR */
+.sidebar{width:220px;background:linear-gradient(180deg,var(--sidebar1),var(--sidebar2));display:flex;flex-direction:column;padding:20px 14px;flex-shrink:0;}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 6px 22px;}
+.brand .mark{width:38px;height:38px;border-radius:9px;background:var(--green);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.brand .name{font-weight:800;font-size:20px;color:#fff;}
+nav{display:flex;flex-direction:column;gap:3px;}
+.nav-item{display:flex;align-items:center;gap:11px;padding:10.5px 13px;border-radius:9px;font-size:13.5px;font-weight:500;color:#9fb3a4;cursor:pointer;transition:.15s;white-space:nowrap;}
+.nav-item svg{width:17px;height:17px;flex-shrink:0;opacity:.9;}
+.nav-item:hover{background:rgba(255,255,255,.06);color:#fff;}
+.nav-item.active{background:var(--green);color:#fff;font-weight:700;}
+.sidebar-footer{margin-top:auto;padding:16px 8px 2px;font-size:11px;color:#7d9784;line-height:1.5;}
+.sidebar-footer b{color:var(--green);display:block;font-size:12px;}
+
+/* MAIN */
+.main{flex:1;min-width:0;padding:22px 26px 40px;}
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:20px;}
+.title-block h1{font-size:23px;font-weight:800;color:var(--navy);}
+.title-block .subtitle{font-size:12px;font-weight:700;color:var(--mid);margin-top:2px;}
+.filters{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.box{border:1px solid var(--border);background:#fff;border-radius:8px;padding:9px 12px;font-size:12.5px;font-weight:500;display:flex;align-items:center;gap:10px;cursor:pointer;}
+.box svg{width:14px;height:14px;color:var(--mid);}
+.icon-btn{width:36px;height:36px;border-radius:9px;border:1px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--mid);}
+.icon-btn svg{width:16px;height:16px;}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;margin-bottom:14px;}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;}
+.kpi-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.kpi-icon{width:34px;height:34px;border-radius:9px;background:var(--green-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.kpi-icon svg{width:18px;height:18px;color:var(--green-dark);}
+.kpi-label{font-size:10.5px;font-weight:700;color:var(--mid);letter-spacing:.4px;text-transform:uppercase;}
+.kpi-value{font-size:21px;font-weight:800;color:var(--navy);}
+.kpi-value .unit{font-size:11.5px;font-weight:600;color:var(--mid);margin-left:2px;}
+.kpi-sub{font-size:10.5px;color:var(--light);font-weight:600;margin-top:6px;}
+
+/* grid rows */
+.grid-row{display:grid;gap:13px;margin-bottom:13px;}
+.grid-row.r1{grid-template-columns:1fr 1fr;}
+.grid-row.r2{grid-template-columns:1.3fr 1fr;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 17px;display:flex;flex-direction:column;min-width:0;}
+.card-title{font-size:12px;font-weight:800;color:var(--navy);letter-spacing:.4px;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between;}
+.card-title .hint{font-size:10px;font-weight:600;color:var(--light);text-transform:none;letter-spacing:0;}
+.chart-wrap{position:relative;flex:1;min-height:210px;margin-top:10px;}
+
+/* map */
+.map-legend-row{display:flex;gap:16px;margin:8px 0 12px;flex-wrap:wrap;}
+.map-legend-row .row{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--mid);font-weight:600;}
+.map-legend-row .dot{width:10px;height:10px;border-radius:50%;}
+.mosaic{background:linear-gradient(135deg,#3f6b38,#2c5230);border-radius:10px;padding:14px;display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+.tile{aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border:2px solid rgba(255,255,255,.55);color:#fff;font-weight:800;font-size:15px;transition:.15s;position:relative;}
+.tile:hover{transform:scale(1.05);}
+.tile.selected{outline:3px solid #fff;outline-offset:1px;}
+.tile .st{font-size:8px;font-weight:700;margin-top:2px;letter-spacing:.2px;}
+
+/* detalhes */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px 16px;margin:10px 0 4px;}
+.detail-item .k{font-size:9.5px;color:var(--light);font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px;}
+.detail-item .v{font-size:13.5px;font-weight:700;color:var(--ink);}
+.status-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:10.5px;font-weight:700;}
+.status-pill.saudavel{background:var(--green-light);color:var(--green-dark);}
+.status-pill.atencao{background:var(--yellow-light);color:#8a6a00;}
+.status-pill.critico{background:var(--red-light);color:var(--red);}
+.status-pill.indefinido{background:#eef1f5;color:var(--light);}
+
+/* alerts */
+.alert-list{display:flex;flex-direction:column;gap:11px;margin-top:8px;overflow-y:auto;max-height:230px;}
+.alert-item{display:flex;gap:10px;align-items:flex-start;}
+.alert-icon{width:24px;height:24px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.alert-icon svg{width:12px;height:12px;}
+.alert-icon.warn{background:var(--yellow-light);color:var(--yellow);}
+.alert-icon.crit{background:var(--red-light);color:var(--red);}
+.alert-icon.info{background:var(--blue-light);color:var(--blue);}
+.alert-title{font-size:11.5px;font-weight:700;color:var(--ink);}
+.alert-desc{font-size:11px;color:var(--mid);margin-top:1px;}
+.alert-empty{font-size:12px;color:var(--light);padding:10px 0;}
+
+/* table */
+.table-card{grid-column:1/-1;}
+.table-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;}
+.btn{border:none;border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit;}
+.btn.primary{background:var(--navy);color:#fff;}
+.btn.ghost{background:var(--green-light);color:var(--green-dark);}
+.btn svg{width:14px;height:14px;}
+.table-scroll{overflow:auto;border:1px solid var(--border);border-radius:10px;max-height:480px;}
+table{border-collapse:collapse;width:100%;font-size:12px;}
+thead th{position:sticky;top:0;background:#f8f9fb;text-align:left;padding:10px 12px;font-size:10px;font-weight:800;color:var(--mid);text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--border);white-space:nowrap;}
+tbody td{padding:8px 12px;border-bottom:1px solid var(--border);white-space:nowrap;}
+tbody tr:hover{background:#fafbfc;}
+td[contenteditable="true"]{cursor:text;border-radius:5px;}
+td[contenteditable="true"]:focus{outline:2px solid var(--green);background:#f3fbf4;}
+select.status-select{border:1px solid var(--border);border-radius:6px;padding:4px 6px;font-size:11.5px;font-family:inherit;background:#fff;}
+.del-btn{width:22px;height:22px;border-radius:6px;border:none;background:var(--red-light);color:var(--red);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.del-btn svg{width:12px;height:12px;}
+.save-note{font-size:11px;color:var(--light);margin-top:8px;}
+
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-thumb{background:#d7dde4;border-radius:3px;}
+@media (max-width:1200px){
+  .kpi-row{grid-template-columns:repeat(3,1fr);}
+  .grid-row.r1, .grid-row.r2{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="brand">
+    <div class="mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 20c8 0 14-6 16-16C10 6 4 12 4 20z" fill="#fff"/></svg></div>
+    <div class="name">ADM</div>
+  </div>
+  <nav>
+    <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/></svg>Resumo Executivo</div>
+    <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>Planejamento</div>
+    <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V11"/><path d="M12 11C12 7 9 5 5 5c0 4 3 6 7 6zM12 11c0-4 3-6 7-6 0 4-3 6-7 6z"/></svg>Viveiro / Mudas</div>
+    <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c-4 4-7 7.5-7 11a7 7 0 0014 0c0-3.5-3-7-7-11z"/></svg>Plantio</div>
+    <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="1.5"/><path d="M9 11h6M9 15h6"/></svg>Inventário</div>
+    <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v9M15 10c0-1.4-1.4-2.3-3-2.3S9 8.6 9 10c0 3 6 1.3 6 4.2 0 1.4-1.4 2.3-3 2.3s-3-.9-3-2.3"/></svg>Custos</div>
+    <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 4 6v14l5-2 6 2 5-2V4l-5 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>Mapa Interativo</div>
+  </nav>
+  <div class="sidebar-footer"><b>🌱 Nutrindo o Futuro</b>desde as raízes</div>
+</aside>
+
+<main class="main">
+
+  <div class="topbar">
+    <div class="title-block">
+      <h1>GESTÃO FLORESTAL</h1>
+      <div class="subtitle">DASHBOARD EXECUTIVO · FAZENDA RETIRO</div>
+    </div>
+    <div class="filters">
+      <div class="box" id="fazendaBox">Fazenda: Retiro</div>
+      <div class="box" id="cicloBox">Ciclo: 1º</div>
+      <div class="icon-btn" id="refreshBtn" title="Atualizar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 11A8 8 0 105.5 16.5M20 11V5M20 11h-6"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row" id="kpiRow"></div>
+
+  <!-- charts row -->
+  <div class="grid-row r1">
+    <div class="card">
+      <div class="card-title">Volume Esperado x Exaurido (mst)<span class="hint">por talhão</span></div>
+      <div class="chart-wrap"><canvas id="chartVolume"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Saldo a Exaurir (R$)<span class="hint">por talhão</span></div>
+      <div class="chart-wrap"><canvas id="chartSaldo"></canvas></div>
+    </div>
+  </div>
+
+  <!-- map + details -->
+  <div class="grid-row r2">
+    <div class="card">
+      <div class="card-title">Mapa dos Talhões</div>
+      <div class="map-legend-row">
+        <div class="row"><span class="dot" style="background:#2f8a44"></span>Saudável</div>
+        <div class="row"><span class="dot" style="background:#f2b705"></span>Atenção</div>
+        <div class="row"><span class="dot" style="background:#e6483f"></span>Crítico</div>
+        <div class="row"><span class="dot" style="background:#c3cbd3"></span>Não definido</div>
+      </div>
+      <div class="mosaic" id="mosaicMap"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Detalhes do Talhão <span id="talhaoSelId" style="color:var(--green-dark)">—</span></div>
+      <div class="detail-grid" id="detailGrid"></div>
+    </div>
+  </div>
+
+  <!-- alerts -->
+  <div class="grid-row" style="grid-template-columns:1fr;">
+    <div class="card">
+      <div class="card-title">Alertas <span class="hint">gerados automaticamente a partir dos dados</span></div>
+      <div class="alert-list" id="alertList"></div>
+    </div>
+  </div>
+
+  <!-- editable table -->
+  <div class="card table-card">
+    <div class="table-toolbar">
+      <div class="card-title" style="margin:0;">Base de Talhões <span class="hint">clique em qualquer célula para editar</span></div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn ghost" id="addColBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Adicionar Coluna
+        </button>
+        <button class="btn primary" id="addRowBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Adicionar Talhão
+        </button>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table id="dataTable">
+        <thead><tr id="tableHeadRow"></tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <div class="save-note" id="saveNote">Os dados ficam salvos neste navegador. Para persistir de vez, ligue no Supabase (SQL fornecido à parte).</div>
+  </div>
+
+</main>
+
+<script>
+/* ============ DADOS BASE (extraídos do Planejamento de Mudas + Base Ativo Biológico - RETIRO) ============ */
+const DEFAULT_DATA = [{"talhao": 1, "ciclo": 1, "area_ha": 15.2, "material_genetico": "VD 2000", "espacamento": "3,50 X 2,50", "mudas_ha": 1142, "data_plantio": "2026-04-10", "ima": 68.6, "volume_esperado_mst": 6272.8, "custo_total_r_ha": 9334.4, "volume_exaurido_mst": 0, "saldo_exaurir_r": 142256.3, "status": ""}, {"talhao": 2, "ciclo": 1, "area_ha": 6.4, "material_genetico": "VD 2000", "espacamento": "3,50 X 2,50", "mudas_ha": 1142, "data_plantio": "2026-04-08", "ima": 68.6, "volume_esperado_mst": 2617.8, "custo_total_r_ha": 8424.0, "volume_exaurido_mst": 0, "saldo_exaurir_r": 53576.64, "status": ""}, {"talhao": 3, "ciclo": 1, "area_ha": 19.9, "material_genetico": "VD 2016", "espacamento": "3,50 X 2,50", "mudas_ha": 1142, "data_plantio": "2026-04-14", "ima": 68.6, "volume_esperado_mst": 8207.3, "custo_total_r_ha": 19502.69, "volume_exaurido_mst": 0, "saldo_exaurir_r": 388883.69, "status": ""}, {"talhao": 4, "ciclo": 1, "area_ha": 16.9, "material_genetico": "VD 2016", "espacamento": "3,50 X 2,50", "mudas_ha": 1142, "data_plantio": "2026-04-13", "ima": 68.6, "volume_esperado_mst": 6960.2, "custo_total_r_ha": 7639.62, "volume_exaurido_mst": 0, "saldo_exaurir_r": 129186.03, "status": ""}, {"talhao": 5, "ciclo": 1, "area_ha": 18.1, "material_genetico": "VD 2016", "espacamento": "3,50 X 2,50", "mudas_ha": 1142, "data_plantio": "2026-04-09", "ima": 68.6, "volume_esperado_mst": 7462.3, "custo_total_r_ha": 8948.36, "volume_exaurido_mst": 0, "saldo_exaurir_r": 162233.81, "status": ""}, {"talhao": 6, "ciclo": 1, "area_ha": 18, "material_genetico": "VD 2016", "espacamento": "3,50 X 2,50", "mudas_ha": 1142, "data_plantio": "2026-04-07", "ima": 68.6, "volume_esperado_mst": 7392.3, "custo_total_r_ha": 8820.89, "volume_exaurido_mst": 0, "saldo_exaurir_r": 158423.2, "status": ""}, {"talhao": 7, "ciclo": 1, "area_ha": 23.8, "material_genetico": "VD 2016", "espacamento": "3,50 X 2,50", "mudas_ha": 1142, "data_plantio": "2026-04-02", "ima": 68.6, "volume_esperado_mst": 9812.5, "custo_total_r_ha": 8702.55, "volume_exaurido_mst": 0, "saldo_exaurir_r": 207468.82, "status": ""}, {"talhao": 8, "ciclo": 1, "area_ha": 23.2, "material_genetico": "VD 1064", "espacamento": "3,50 X 2,50", "mudas_ha": 1142, "data_plantio": "2026-04-06", "ima": 68.6, "volume_esperado_mst": 9528.5, "custo_total_r_ha": 8472.38, "volume_exaurido_mst": 0, "saldo_exaurir_r": 196135.67, "status": ""}, {"talhao": 9, "ciclo": 1, "area_ha": 21.9, "material_genetico": "CORYMBIA", "espacamento": "3,50 X 2,50", "mudas_ha": 1142, "data_plantio": "2026-03-30", "ima": 68.6, "volume_esperado_mst": 8997.6, "custo_total_r_ha": 11073.25, "volume_exaurido_mst": 0, "saldo_exaurir_r": 242061.28, "status": ""}, {"talhao": 10, "ciclo": 1, "area_ha": 20.6, "material_genetico": "VD 1064", "espacamento": "3,50 X 2,50", "mudas_ha": 1142, "data_plantio": "2026-03-29", "ima": 68.6, "volume_esperado_mst": 8466.6, "custo_total_r_ha": 10272.4, "volume_exaurido_mst": 0, "saldo_exaurir_r": 211303.26, "status": ""}, {"talhao": 11, "ciclo": 1, "area_ha": 27.1, "material_genetico": "VD 2016", "espacamento": "3,50 X 2,50", "mudas_ha": 1142, "data_plantio": "2026-03-11", "ima": 68.6, "volume_esperado_mst": 11133.8, "custo_total_r_ha": 9018.29, "volume_exaurido_mst": 0, "saldo_exaurir_r": 243944.68, "status": ""}, {"talhao": 12, "ciclo": 1, "area_ha": 22.2, "material_genetico": "CORYMBIA", "espacamento": "3,50 X 2,50", "mudas_ha": 1142, "data_plantio": "2026-03-11", "ima": 68.6, "volume_esperado_mst": 9149.9, "custo_total_r_ha": 9828.34, "volume_exaurido_mst": 0, "saldo_exaurir_r": 218484.08, "status": ""}, {"talhao": 13, "ciclo": 1, "area_ha": 20.4, "material_genetico": "VD 1064", "espacamento": "3,50 X 2,50", "mudas_ha": 1142, "data_plantio": "2026-03-28", "ima": 68.6, "volume_esperado_mst": 8413.1, "custo_total_r_ha": 10779.85, "volume_exaurido_mst": 0, "saldo_exaurir_r": 220340.14, "status": ""}, {"talhao": 14, "ciclo": 1, "area_ha": 20.6, "material_genetico": "CORYMBIA", "espacamento": "3,50 X 2,50", "mudas_ha": 1142, "data_plantio": "2026-03-23", "ima": 68.6, "volume_esperado_mst": 8487.2, "custo_total_r_ha": 10550.02, "volume_exaurido_mst": 0, "saldo_exaurir_r": 217541.46, "status": ""}, {"talhao": 15, "ciclo": 1, "area_ha": 21.7, "material_genetico": "VD 1064", "espacamento": "3,50 X 2,50", "mudas_ha": 1142, "data_plantio": "2026-03-16", "ima": 68.6, "volume_esperado_mst": 8911.1, "custo_total_r_ha": 9362.74, "volume_exaurido_mst": 0, "saldo_exaurir_r": 202703.4, "status": ""}, {"talhao": 16, "ciclo": 1, "area_ha": 21.3, "material_genetico": "VD 2016", "espacamento": "3,50 X 2,50", "mudas_ha": 1142, "data_plantio": "2026-03-16", "ima": 68.6, "volume_esperado_mst": 8771.2, "custo_total_r_ha": 9825.35, "volume_exaurido_mst": 0, "saldo_exaurir_r": 209378.28, "status": ""}, {"talhao": 17, "ciclo": 1, "area_ha": 15.5, "material_genetico": "VD 2016", "espacamento": "3,50 X 2,50", "mudas_ha": 1142, "data_plantio": "2026-03-20", "ima": 68.6, "volume_esperado_mst": 6375.7, "custo_total_r_ha": 9145.06, "volume_exaurido_mst": 0, "saldo_exaurir_r": 141656.92, "status": ""}, {"talhao": 18, "ciclo": 1, "area_ha": 3, "material_genetico": "CORYMBIA", "espacamento": "3,50 X 2,50", "mudas_ha": 1142, "data_plantio": "2026-03-16", "ima": 68.6, "volume_esperado_mst": 1230.7, "custo_total_r_ha": 20741.95, "volume_exaurido_mst": 0, "saldo_exaurir_r": 62018.42, "status": ""}, {"talhao": 19, "ciclo": 1, "area_ha": 22.7, "material_genetico": "VD 1064", "espacamento": "3,50 X 2,50", "mudas_ha": 1142, "data_plantio": "2026-03-26", "ima": 68.6, "volume_esperado_mst": 9355.7, "custo_total_r_ha": 8585.03, "volume_exaurido_mst": 0, "saldo_exaurir_r": 195137.65, "status": ""}];
+
+const COLUMN_DEFS = [
+  {key:'talhao', label:'Talhão', type:'number'},
+  {key:'ciclo', label:'Ciclo', type:'number'},
+  {key:'area_ha', label:'Área (ha)', type:'number'},
+  {key:'material_genetico', label:'Material Genético', type:'text'},
+  {key:'espacamento', label:'Espaçamento', type:'text'},
+  {key:'mudas_ha', label:'Mudas/ha', type:'number'},
+  {key:'data_plantio', label:'Data Plantio', type:'date'},
+  {key:'ima', label:'IMA (m³/ha/ano)', type:'number'},
+  {key:'volume_esperado_mst', label:'Vol. Esperado (mst)', type:'number'},
+  {key:'custo_total_r_ha', label:'Custo (R$/ha)', type:'number'},
+  {key:'volume_exaurido_mst', label:'Vol. Exaurido (mst)', type:'number'},
+  {key:'saldo_exaurir_r', label:'Saldo a Exaurir (R$)', type:'number'},
+  {key:'status', label:'Status', type:'status'}
+];
+
+let state = { rows: [], selectedTalhao: null };
+let charts = {};
+
+function fmtNum(v, dec=1){ if(v===null||v===undefined||v==='') return '—'; return Number(v).toLocaleString('pt-BR',{minimumFractionDigits:dec,maximumFractionDigits:dec}); }
+function fmtInt(v){ if(v===null||v===undefined||v==='') return '—'; return Number(v).toLocaleString('pt-BR'); }
+function fmtCurrency(v){ if(v===null||v===undefined||v==='') return '—'; return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtDate(v){ if(!v) return '—'; const d=new Date(v+'T00:00:00'); return d.toLocaleDateString('pt-BR'); }
+
+async function loadState(){
+  try{
+    const r = await window.storage.get('gestao-florestal-talhoes', false);
+    if(r && r.value){ return JSON.parse(r.value); }
+  }catch(e){ /* nada salvo ainda */ }
+  return { rows: JSON.parse(JSON.stringify(DEFAULT_DATA)), columns: COLUMN_DEFS };
+}
+async function saveState(){
+  try{
+    await window.storage.set('gestao-florestal-talhoes', JSON.stringify({rows: state.rows, columns: state.columns}), false);
+  }catch(e){ console.error('Falha ao salvar', e); }
+}
+
+function weightedAvg(rows, key, weightKey){
+  let ws=0, vs=0;
+  rows.forEach(r=>{ const w=Number(r[weightKey])||0; const v=Number(r[key]); if(!isNaN(v)){ ws+=w; vs+=v*w; } });
+  return ws>0 ? vs/ws : null;
+}
+function sum(rows, key){ return rows.reduce((a,r)=> a + (Number(r[key])||0), 0); }
+
+function renderKPIs(){
+  const rows = state.rows;
+  const areaTotal = sum(rows,'area_ha');
+  const volEsperado = sum(rows,'volume_esperado_mst');
+  const imaMedio = weightedAvg(rows,'ima','area_ha');
+  const custoMedio = weightedAvg(rows,'custo_total_r_ha','area_ha');
+  const saldoTotal = sum(rows,'saldo_exaurir_r');
+
+  const kpis = [
+    { label:'Área Total Plantada', value: fmtNum(areaTotal,1), unit:'ha', sub:`${rows.length} talhões`,
+      icon:'<path d="M12 21V11"/><path d="M12 11C12 7 9 5 5 5c0 4 3 6 7 6zM12 11c0-4 3-6 7-6 0 4-3 6-7 6z"/>' },
+    { label:'Volume Esperado', value: fmtNum(volEsperado,0), unit:'mst', sub:'Ciclo 1º · Fazenda Retiro',
+      icon:'<ellipse cx="12" cy="7" rx="7" ry="2.3"/><path d="M5 7v10c0 1.3 3.1 2.3 7 2.3s7-1 7-2.3V7"/>' },
+    { label:'IMA Médio', value: imaMedio!==null?fmtNum(imaMedio,1):'—', unit:'m³/ha/ano', sub:'Ponderado por área',
+      icon:'<path d="M4 15l5 5L20 9"/>' },
+    { label:'Custo Médio', value: custoMedio!==null?fmtCurrency(custoMedio):'—', unit:'/ha', sub:'Ponderado por área',
+      icon:'<path d="M9 6h6l2.5 4H6.5L9 6z"/><path d="M6.5 10h11l1.2 8.5a2 2 0 01-2 2.5H7.3a2 2 0 01-2-2.5L6.5 10z"/><path d="M12 13v4"/>' },
+    { label:'Saldo a Exaurir', value: fmtCurrency(saldoTotal), unit:'', sub:'Total da fazenda',
+      icon:'<circle cx="12" cy="12" r="9"/><path d="M12 7.5v9M15 10c0-1.4-1.4-2.3-3-2.3S9 8.6 9 10c0 3 6 1.3 6 4.2 0 1.4-1.4 2.3-3 2.3s-3-.9-3-2.3"/>' }
+  ];
+  document.getElementById('kpiRow').innerHTML = kpis.map(k=>`
+    <div class="kpi-card">
+      <div class="kpi-top">
+        <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${k.icon}</svg></div>
+        <div class="kpi-label">${k.label}</div>
+      </div>
+      <div class="kpi-value">${k.value}<span class="unit">${k.unit}</span></div>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>`).join('');
+}
+
+function renderCharts(){
+  const rows = [...state.rows].sort((a,b)=>Number(a.talhao)-Number(b.talhao));
+  const labels = rows.map(r=>String(r.talhao).padStart(2,'0'));
+
+  if(charts.volume) charts.volume.destroy();
+  charts.volume = new Chart(document.getElementById('chartVolume'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'Esperado', data: rows.map(r=>Number(r.volume_esperado_mst)||0), backgroundColor:'#c7e3cc', borderRadius:3, maxBarThickness:14 },
+      { label:'Exaurido', data: rows.map(r=>Number(r.volume_exaurido_mst)||0), backgroundColor:'#2f8a44', borderRadius:3, maxBarThickness:14 }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'top', align:'start', labels:{ boxWidth:12, font:{size:10.5,weight:'600'} } } },
+      scales:{ x:{ grid:{display:false}, border:{display:false}, ticks:{font:{size:9.5}} },
+                y:{ grid:{color:'#eef1f5'}, border:{display:false}, ticks:{font:{size:9.5}} } } }
+  });
+
+  if(charts.saldo) charts.saldo.destroy();
+  charts.saldo = new Chart(document.getElementById('chartSaldo'), {
+    type:'bar',
+    data:{ labels, datasets:[{ data: rows.map(r=>Number(r.saldo_exaurir_r)||0), backgroundColor:'#0f2947', borderRadius:3, maxBarThickness:14 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{ x:{ grid:{display:false}, border:{display:false}, ticks:{font:{size:9.5}} },
+                y:{ grid:{color:'#eef1f5'}, border:{display:false}, ticks:{ font:{size:9}, callback:v=> 'R$ '+(v/1000)+'mil' } } } }
+  });
+}
+
+function statusClass(s){
+  if(s==='Saudável') return 'saudavel';
+  if(s==='Atenção') return 'atencao';
+  if(s==='Crítico') return 'critico';
+  return 'indefinido';
+}
+function statusColor(s){
+  if(s==='Saudável') return '#2f8a44';
+  if(s==='Atenção') return '#f2b705';
+  if(s==='Crítico') return '#e6483f';
+  return '#c3cbd3';
+}
+
+function renderMap(){
+  const rows = [...state.rows].sort((a,b)=>Number(a.talhao)-Number(b.talhao));
+  const box = document.getElementById('mosaicMap');
+  box.innerHTML = rows.map(r=>{
+    const sel = state.selectedTalhao===r.talhao ? 'selected' : '';
+    return `<div class="tile ${sel}" style="background:${statusColor(r.status)}" data-talhao="${r.talhao}">
+      ${String(r.talhao).padStart(2,'0')}
+      <span class="st">${r.status||'—'}</span>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('.tile').forEach(t=>{
+    t.addEventListener('click', ()=>{ state.selectedTalhao = Number(t.dataset.talhao); renderMap(); renderDetail(); });
+  });
+  if(state.selectedTalhao===null && rows.length){ state.selectedTalhao = rows[0].talhao; }
+}
+
+function renderDetail(){
+  const row = state.rows.find(r=>Number(r.talhao)===Number(state.selectedTalhao));
+  document.getElementById('talhaoSelId').textContent = row ? String(row.talhao).padStart(2,'0') : '—';
+  if(!row){ document.getElementById('detailGrid').innerHTML = '<div style="color:var(--light);font-size:12px;">Selecione um talhão no mapa.</div>'; return; }
+  const idadeDias = row.data_plantio ? Math.floor((new Date()-new Date(row.data_plantio+'T00:00:00'))/86400000) : null;
+  const items = [
+    ['Espécie / Material Genético', row.material_genetico||'—'],
+    ['Área (ha)', fmtNum(row.area_ha,2)],
+    ['Espaçamento', row.espacamento||'—'],
+    ['Mudas/ha', fmtInt(row.mudas_ha)],
+    ['Data do Plantio', fmtDate(row.data_plantio)],
+    ['Idade', idadeDias!==null ? (idadeDias+' dias') : '—'],
+    ['IMA', row.ima!==null&&row.ima!==''? fmtNum(row.ima,1)+' m³/ha/ano':'—'],
+    ['Volume Esperado', fmtNum(row.volume_esperado_mst,1)+' mst'],
+    ['Custo por Hectare', fmtCurrency(row.custo_total_r_ha)],
+    ['Saldo a Exaurir', fmtCurrency(row.saldo_exaurir_r)],
+  ];
+  let html = items.map(([k,v])=>`<div class="detail-item"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+  html += `<div class="detail-item"><div class="k">Status</div><div class="v"><span class="status-pill ${statusClass(row.status)}">${row.status||'Não definido'}</span></div></div>`;
+  document.getElementById('detailGrid').innerHTML = html;
+}
+
+function renderAlerts(){
+  const rows = state.rows;
+  const alerts = [];
+  const custoMedio = weightedAvg(rows,'custo_total_r_ha','area_ha') || 0;
+  rows.forEach(r=>{
+    const custo = Number(r.custo_total_r_ha);
+    if(!isNaN(custo) && custoMedio>0 && custo > custoMedio*1.3){
+      alerts.push({ level:'warn', title:`Talhão ${String(r.talhao).padStart(2,'0')} com custo acima da média`,
+        desc:`${fmtCurrency(custo)}/ha vs. média de ${fmtCurrency(custoMedio)}/ha` });
+    }
+  });
+  const imaMedio = weightedAvg(rows,'ima','area_ha') || 0;
+  rows.forEach(r=>{
+    const ima = Number(r.ima);
+    if(!isNaN(ima) && imaMedio>0 && ima < imaMedio*0.9){
+      alerts.push({ level:'crit', title:`Talhão ${String(r.talhao).padStart(2,'0')} com IMA abaixo da média`,
+        desc:`${fmtNum(ima,1)} m³/ha/ano vs. média de ${fmtNum(imaMedio,1)}` });
+    }
+  });
+  const semStatus = rows.filter(r=>!r.status).length;
+  if(semStatus>0){
+    alerts.push({ level:'info', title:'Talhões sem status definido', desc:`${semStatus} talhão(ões) precisam de classificação no mapa` });
+  }
+  const criticos = rows.filter(r=>r.status==='Crítico').length;
+  if(criticos>0){
+    alerts.push({ level:'crit', title:`${criticos} talhão(ões) em estado crítico`, desc:'Verifique o mapa dos talhões para detalhes' });
+  }
+
+  const list = document.getElementById('alertList');
+  if(alerts.length===0){ list.innerHTML = '<div class="alert-empty">Nenhum alerta no momento — dados dentro dos parâmetros esperados.</div>'; return; }
+  const iconFor = { warn:'<path d="M12 3l10 18H2L12 3z"/><path d="M12 10v4M12 17.3v.1"/>',
+                    crit:'<path d="M6 6l12 12M18 6L6 18"/>',
+                    info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 8v.1"/>' };
+  list.innerHTML = alerts.map(a=>`
+    <div class="alert-item">
+      <div class="alert-icon ${a.level}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${iconFor[a.level]}</svg></div>
+      <div><div class="alert-title">${a.title}</div><div class="alert-desc">${a.desc}</div></div>
+    </div>`).join('');
+}
+
+function renderTable(){
+  const head = document.getElementById('tableHeadRow');
+  head.innerHTML = state.columns.map(c=>`<th>${c.label}</th>`).join('') + '<th></th>';
+
+  const body = document.getElementById('tableBody');
+  const rows = [...state.rows].sort((a,b)=>Number(a.talhao)-Number(b.talhao));
+  body.innerHTML = rows.map(r=>{
+    const cells = state.columns.map(c=>{
+      if(c.type==='status'){
+        const opts = ['','Saudável','Atenção','Crítico'].map(o=>`<option value="${o}" ${r.status===o?'selected':''}>${o||'Não definido'}</option>`).join('');
+        return `<td><select class="status-select" data-talhao="${r.talhao}" data-key="status">${opts}</select></td>`;
+      }
+      const val = r[c.key]!==undefined && r[c.key]!==null ? r[c.key] : '';
+      return `<td contenteditable="true" data-talhao="${r.talhao}" data-key="${c.key}" data-type="${c.type}">${val}</td>`;
+    }).join('');
+    return `<tr data-row-talhao="${r.talhao}">${cells}<td><button class="del-btn" data-del="${r.talhao}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></td></tr>`;
+  }).join('');
+
+  body.querySelectorAll('td[contenteditable="true"]').forEach(td=>{
+    td.addEventListener('blur', onCellEdit);
+  });
+  body.querySelectorAll('select.status-select').forEach(sel=>{
+    sel.addEventListener('change', onCellEdit);
+  });
+  body.querySelectorAll('.del-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const t = Number(btn.dataset.del);
+      state.rows = state.rows.filter(r=>Number(r.talhao)!==t);
+      if(state.selectedTalhao===t) state.selectedTalhao = state.rows.length? state.rows[0].talhao : null;
+      refreshAll(); saveState();
+    });
+  });
+}
+
+function onCellEdit(e){
+  const el = e.target;
+  const talhao = Number(el.dataset.talhao);
+  const key = el.dataset.key;
+  const row = state.rows.find(r=>Number(r.talhao)===talhao);
+  if(!row) return;
+  let val = el.tagName==='SELECT' ? el.value : el.textContent.trim();
+  if(el.dataset.type==='number'){ val = val===''? '' : Number(val.replace(',','.')); if(isNaN(val)) val=''; }
+  row[key] = val;
+  refreshAll(); saveState();
+}
+
+document.getElementById('addRowBtn').addEventListener('click', ()=>{
+  const maxT = state.rows.reduce((m,r)=>Math.max(m,Number(r.talhao)||0),0);
+  const newRow = { talhao: maxT+1, status:'' };
+  state.columns.forEach(c=>{ if(newRow[c.key]===undefined) newRow[c.key] = c.type==='number' ? '' : ''; });
+  state.rows.push(newRow);
+  state.selectedTalhao = newRow.talhao;
+  refreshAll(); saveState();
+});
+
+document.getElementById('addColBtn').addEventListener('click', ()=>{
+  const label = prompt('Nome da nova coluna:');
+  if(!label) return;
+  const key = 'col_' + label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+  if(state.columns.find(c=>c.key===key)){ alert('Já existe uma coluna com esse nome.'); return; }
+  state.columns.push({ key, label, type:'text' });
+  state.rows.forEach(r=>{ r[key] = ''; });
+  refreshAll(); saveState();
+});
+
+document.getElementById('refreshBtn').addEventListener('click', function(){
+  this.style.transition='transform .5s'; this.style.transform='rotate(360deg)';
+  setTimeout(()=>{ this.style.transition='none'; this.style.transform='rotate(0deg)'; }, 500);
+  refreshAll();
+});
+
+function refreshAll(){
+  renderKPIs();
+  renderCharts();
+  renderMap();
+  renderDetail();
+  renderAlerts();
+  renderTable();
+}
+
+(async function init(){
+  const loaded = await loadState();
+  state.rows = loaded.rows;
+  state.columns = loaded.columns && loaded.columns.length ? loaded.columns : COLUMN_DEFS;
+  refreshAll();
+})();
+</script>
+</body>
+</html>
