@@ -89,19 +89,25 @@ nav{display:flex;flex-direction:column;gap:3px;}
 
 /* grid rows */
 .grid-row{display:grid;gap:13px;margin-bottom:13px;}
-.grid-row.r1{grid-template-columns:1fr 1fr 1fr;}
+.grid-row.r1{grid-template-columns:1fr 1fr;}
 .grid-row.r2{grid-template-columns:1.3fr 1fr;}
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 17px;display:flex;flex-direction:column;min-width:0;}
 .card-title{font-size:12px;font-weight:800;color:var(--navy);letter-spacing:.4px;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between;}
 .card-title .hint{font-size:10px;font-weight:600;color:var(--light);text-transform:none;letter-spacing:0;}
 .chart-wrap{position:relative;flex:1;min-height:210px;margin-top:10px;}
+.chart-wrap-tall{min-height:280px;}
 
 /* map */
 .map-legend-row{display:flex;gap:16px;margin:8px 0 12px;flex-wrap:wrap;}
 .map-legend-row .row{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--mid);font-weight:600;}
 .map-legend-row .dot{width:10px;height:10px;border-radius:50%;}
-.map-svg-box{background:linear-gradient(160deg,#4a7a3f,#2c5230);border-radius:10px;padding:10px;display:flex;align-items:center;justify-content:center;min-height:360px;}
-.map-svg-box svg{width:100%;height:100%;max-height:420px;}
+.map-svg-box{position:relative;background:radial-gradient(ellipse at 30% 20%,#5a8a4a,#3a6b3a 55%,#264d28 100%);border-radius:10px;padding:10px;display:flex;align-items:center;justify-content:center;min-height:360px;overflow:hidden;}
+.map-svg-box svg{width:100%;height:100%;max-height:420px;position:relative;z-index:1;}
+.map-coords-badge{position:absolute;top:12px;left:12px;z-index:2;background:rgba(15,41,26,.82);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:9px 12px;font-size:10px;color:#dcefe0;min-width:150px;}
+.map-coords-badge .coords-title{font-size:9px;font-weight:800;color:#f2c94c;letter-spacing:.3px;margin-bottom:6px;}
+.map-coords-badge .coords-row{display:flex;justify-content:space-between;gap:10px;padding:1.5px 0;}
+.map-coords-badge .coords-row span{color:#a8c4ac;}
+.map-coords-badge .coords-row b{font-weight:700;color:#fff;}
 .talhao-shape{cursor:pointer;transition:.15s;stroke:#fff;stroke-width:1.4;}
 .talhao-shape:hover{filter:brightness(1.12);}
 .talhao-shape.selected{stroke:#fff;stroke-width:3;}
@@ -248,15 +254,18 @@ select.status-select{border:1px solid var(--border);border-radius:6px;padding:4p
   <div class="grid-row r1">
     <div class="card">
       <div class="card-title">Volume Esperado x Exaurido (mst)<span class="hint">por talhão</span></div>
-      <div class="chart-wrap"><canvas id="chartVolume"></canvas></div>
+      <div class="chart-wrap chart-wrap-tall"><canvas id="chartVolume"></canvas></div>
     </div>
     <div class="card">
       <div class="card-title">Saldo a Exaurir (R$)<span class="hint">por talhão</span></div>
-      <div class="chart-wrap"><canvas id="chartSaldo"></canvas></div>
+      <div class="chart-wrap chart-wrap-tall"><canvas id="chartSaldo"></canvas></div>
     </div>
+  </div>
+
+  <div class="grid-row" style="grid-template-columns:1fr;">
     <div class="card">
       <div class="card-title">Sobrevivência das Mudas (%)<span class="hint">por talhão</span></div>
-      <div class="chart-wrap"><canvas id="chartSobrevivencia"></canvas>
+      <div class="chart-wrap chart-wrap-tall"><canvas id="chartSobrevivencia"></canvas>
         <div id="sobrevivenciaEmpty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;text-align:center;color:var(--light);font-size:12px;padding:0 20px;">Nenhum dado lançado ainda — preencha "Sobrevivência (%)" na tabela abaixo.</div>
       </div>
     </div>
@@ -273,6 +282,12 @@ select.status-select{border:1px solid var(--border);border-radius:6px;padding:4p
         <div class="row"><span class="dot" style="background:#c3cbd3"></span>Não definido</div>
       </div>
       <div class="map-svg-box" id="mapSvgBox">
+        <div class="map-coords-badge">
+          <div class="coords-title">📍 COORDENADAS CENTRAIS</div>
+          <div class="coords-row"><span>Latitude</span><b>-6.92776308</b></div>
+          <div class="coords-row"><span>Longitude</span><b>-47.45427258</b></div>
+          <div class="coords-row"><span>Altitude</span><b>245,852 m</b></div>
+        </div>
         <svg id="talhoesSvg" viewBox="0 0 176.5 330" preserveAspectRatio="xMidYMid meet"></svg>
       </div>
     </div>
@@ -499,34 +514,31 @@ function renderKPIs(){
     </div>`).join('');
 }
 
-// Plugin próprio para exibir o valor de cada barra sempre visível (sem precisar passar o mouse).
-// Feito na mão (em vez do chartjs-plugin-datalabels) porque o Chart.js está embutido no arquivo, sem CDN.
-const barValueLabelsPlugin = {
-  id: 'barValueLabels',
-  afterDatasetsDraw(chart){
-    const opts = chart.config._config.options.plugins && chart.config._config.options.plugins.barValueLabels;
-    if(!opts || !opts.display) return;
-    const {ctx} = chart;
-    ctx.save();
-    ctx.font = opts.font || '600 8.5px Inter, Arial, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    chart.data.datasets.forEach((dataset, dsIndex)=>{
-      const meta = chart.getDatasetMeta(dsIndex);
-      if(meta.hidden) return;
-      meta.data.forEach((bar, i)=>{
-        const value = dataset.data[i];
-        if(value===null || value===undefined || value==='') return;
-        const label = opts.formatter ? opts.formatter(value) : value;
-        const pos = bar.tooltipPosition();
-        ctx.fillStyle = opts.color || '#0f2947';
-        ctx.fillText(label, pos.x, pos.y - 3);
+function barLabelsPlugin(id, formatter, opts){
+  opts = opts || {};
+  return {
+    id: id,
+    afterDatasetsDraw(chart){
+      const {ctx} = chart;
+      chart.data.datasets.forEach((ds, dsIndex)=>{
+        const meta = chart.getDatasetMeta(dsIndex);
+        meta.data.forEach((bar, i)=>{
+          const raw = ds.data[i];
+          if(raw===null || raw===undefined) return;
+          const text = formatter(raw);
+          if(text==='') return;
+          ctx.save();
+          ctx.fillStyle = opts.color || '#16233a';
+          ctx.font = (opts.weight||'700') + ' ' + (opts.size||9) + 'px Inter';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'alphabetic';
+          ctx.fillText(text, bar.x, bar.y - (opts.offset||5));
+          ctx.restore();
+        });
       });
-    });
-    ctx.restore();
-  }
-};
-Chart.register(barValueLabelsPlugin);
+    }
+  };
+}
 
 function renderCharts(){
   const rows = [...state.rows].sort((a,b)=>Number(a.talhao)-Number(b.talhao));
@@ -536,27 +548,27 @@ function renderCharts(){
   charts.volume = new Chart(document.getElementById('chartVolume'), {
     type:'bar',
     data:{ labels, datasets:[
-      { label:'Esperado', data: rows.map(r=>Number(r.volume_esperado_mst)||0), backgroundColor:'#c7e3cc', borderRadius:3, maxBarThickness:14 },
-      { label:'Exaurido', data: rows.map(r=>Number(r.volume_exaurido_mst)||0), backgroundColor:'#2f8a44', borderRadius:3, maxBarThickness:14 }
+      { label:'Esperado', data: rows.map(r=>Number(r.volume_esperado_mst)||0), backgroundColor:'#c7e3cc', borderRadius:3, maxBarThickness:22 },
+      { label:'Exaurido', data: rows.map(r=>Number(r.volume_exaurido_mst)||0), backgroundColor:'#2f8a44', borderRadius:3, maxBarThickness:22 }
     ]},
     options:{ responsive:true, maintainAspectRatio:false,
-      layout:{ padding:{ top:16 } },
-      plugins:{ legend:{ position:'top', align:'start', labels:{ boxWidth:12, font:{size:10.5,weight:'600'} } },
-                barValueLabels:{ display:true, formatter:v=>fmtNum(v,0), font:'600 7.5px Inter, Arial, sans-serif' } },
+      layout:{ padding:{ top:24 } },
+      plugins:{ legend:{ position:'top', align:'start', labels:{ boxWidth:12, font:{size:10.5,weight:'600'} } } },
       scales:{ x:{ grid:{display:false}, border:{display:false}, ticks:{font:{size:9.5}} },
-                y:{ grid:{color:'#eef1f5'}, border:{display:false}, ticks:{font:{size:9.5}} } } }
+                y:{ grid:{color:'#eef1f5'}, border:{display:false}, ticks:{font:{size:9.5}} } } },
+    plugins:[ barLabelsPlugin('volumeLabels', v=>v?Math.round(v).toLocaleString('pt-BR'):'', {size:8.5, offset:5}) ]
   });
 
   if(charts.saldo) charts.saldo.destroy();
   charts.saldo = new Chart(document.getElementById('chartSaldo'), {
     type:'bar',
-    data:{ labels, datasets:[{ data: rows.map(r=>Number(r.saldo_exaurir_r)||0), backgroundColor:'#0f2947', borderRadius:3, maxBarThickness:14 }] },
+    data:{ labels, datasets:[{ data: rows.map(r=>Number(r.saldo_exaurir_r)||0), backgroundColor:'#0f2947', borderRadius:3, maxBarThickness:22 }] },
     options:{ responsive:true, maintainAspectRatio:false,
-      layout:{ padding:{ top:16 } },
-      plugins:{ legend:{ display:false },
-                barValueLabels:{ display:true, formatter:v=>fmtNum(v/1000,0)+'k', font:'600 8px Inter, Arial, sans-serif' } },
+      layout:{ padding:{ top:24 } },
+      plugins:{ legend:{ display:false } },
       scales:{ x:{ grid:{display:false}, border:{display:false}, ticks:{font:{size:9.5}} },
-                y:{ grid:{color:'#eef1f5'}, border:{display:false}, ticks:{ font:{size:9}, callback:v=> 'R$ '+(v/1000)+'mil' } } } }
+                y:{ grid:{color:'#eef1f5'}, border:{display:false}, ticks:{ font:{size:9}, callback:v=> 'R$ '+(v/1000)+'mil' } } } },
+    plugins:[ barLabelsPlugin('saldoLabels', v=>v?Math.round(v/1000).toLocaleString('pt-BR')+'k':'', {size:8.5, offset:5}) ]
   });
 
   if(charts.sobrevivencia) charts.sobrevivencia.destroy();
@@ -565,13 +577,13 @@ function renderCharts(){
   if(temSobrevivencia){
     charts.sobrevivencia = new Chart(document.getElementById('chartSobrevivencia'), {
       type:'bar',
-      data:{ labels, datasets:[{ data: rows.map(r=> r.sobrevivencia_pct!==null&&r.sobrevivencia_pct!==''?Number(r.sobrevivencia_pct):null), backgroundColor:'#2f8a44', borderRadius:3, maxBarThickness:14 }] },
+      data:{ labels, datasets:[{ data: rows.map(r=> r.sobrevivencia_pct!==null&&r.sobrevivencia_pct!==''?Number(r.sobrevivencia_pct):null), backgroundColor:'#2f8a44', borderRadius:3, maxBarThickness:28 }] },
       options:{ responsive:true, maintainAspectRatio:false,
-        layout:{ padding:{ top:16 } },
-        plugins:{ legend:{ display:false },
-                  barValueLabels:{ display:true, formatter:v=>fmtNum(v,1)+'%', font:'600 8px Inter, Arial, sans-serif' } },
+        layout:{ padding:{ top:24 } },
+        plugins:{ legend:{ display:false } },
         scales:{ x:{ grid:{display:false}, border:{display:false}, ticks:{font:{size:9.5}} },
-                  y:{ min:0, max:100, grid:{color:'#eef1f5'}, border:{display:false}, ticks:{ font:{size:9.5}, callback:v=>v+'%' } } } }
+                  y:{ min:0, max:110, grid:{color:'#eef1f5'}, border:{display:false}, ticks:{ font:{size:9.5}, stepSize:20, callback:v=> v<=100? v+'%':'' } } } },
+      plugins:[ barLabelsPlugin('sobrevivenciaLabels', v=>v!==null?Number(v).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%':'', {size:8.5, offset:6}) ]
     });
   }
 }
@@ -594,6 +606,19 @@ function renderMap(){
   const svgNS = "http://www.w3.org/2000/svg";
   const svg = document.getElementById('talhoesSvg');
   svg.innerHTML = '';
+
+  // textura de fundo (manchas deterministicas, efeito aereo)
+  const seedPts = [[18,22,9],[45,15,7],[70,35,10],[30,60,8],[90,20,9],[110,45,8],
+    [130,70,10],[150,90,7],[60,100,9],[100,120,8],[140,140,9],[30,150,7],
+    [80,180,10],[120,200,8],[50,220,9],[100,250,7],[140,270,9],[70,290,8],
+    [110,310,9],[25,100,6],[160,180,7],[40,260,8]];
+  seedPts.forEach(p=>{
+    const c = document.createElementNS(svgNS,'circle');
+    c.setAttribute('cx',p[0]); c.setAttribute('cy',p[1]); c.setAttribute('r',p[2]);
+    c.setAttribute('fill', '#2f5c34'); c.setAttribute('opacity','0.4');
+    svg.appendChild(c);
+  });
+
   rows.forEach(r=>{
     const pts = TALHAO_SHAPES[Number(r.talhao)];
     if(!pts) return;
